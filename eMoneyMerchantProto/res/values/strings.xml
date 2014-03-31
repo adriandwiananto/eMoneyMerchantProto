@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">eMoney Merchant Proto</string>
+    <string name="action_settings">Settings</string>
+	<string name="nfc_disabled">NFC disabled. Would you like to enable?</string>
+    <string name="bNewTrans">New Trans</string>
+    <string name="bHistory">History</string>
+    <string name="bSettlement">Settlement</string>
+    <string name="bOption">Option</string>
+    <string name="bNewTransCancel">Cancel</string>
+    <string name="tNewTransSESN">Security Number:</string>
+    <string name="tOptionOldPass">Current PIN\t\t\t\t\t:</string>
+    <string name="tOptionNewPass">New PIN\t\t\t\t\t\t:</string>
+    <string name="tOptionConfPass">Confirm PIN\t\t\t\t\t:</string>
+    <string name="bOptionProceed">Proceed</string>
+    <string name="bOptionCancel">Cancel</string>
+    <string name="tRegACCN">Account ID :</string>
+    <string name="tRegNewPass">New PIN :</string>
+    <string name="tRegConfPass">Confirm PIN :</string>
+    <string name="bRegConfirm">Confirm</string>
+    <string name="bRegCancel">Cancel</string>
+    <string name="tLoginPassword">PIN :</string>
+    <string name="bLoginProceed">Proceed</string>
+    <string name="bLoginCancel">Cancel</string>
+    <string name="tMainDebug">Waiting debug result</string>
+    <string name="tHistoryError">Failed to load log history!\nChange in App Data is forbidden and irreversible!</string>
+    <string name="tNewTransSESNDigit">123</string>
+</resources>
