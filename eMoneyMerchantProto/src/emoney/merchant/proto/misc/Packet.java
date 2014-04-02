@@ -147,6 +147,8 @@ public class Packet {
 		private byte[] receivedSesnPayload = new byte[2];
 		private byte[] receivedIV = new byte[16];
 		
+		private byte[] receivedPlainPacket = new byte[55]; 
+
 		private int errorCode = 0;
 		private String[] errorMsg = {"","received packet length is not 55","decrypt function throw exception","decrypt ok, but result is wrong!"};
 		
@@ -175,9 +177,22 @@ public class Packet {
 					receivedLATS = Arrays.copyOfRange(decryptedPayload, 14, 18);
 					receivedSesnPayload = Arrays.copyOfRange(decryptedPayload, 18, 20);
 					
-					if(receivedSesnHeader != receivedSesnPayload){
+					Log.d(TAG,"receiveid ACCN: "+Converter.byteArrayToHexString(receivedACCN)
+							+"\nreceived TS: "+Converter.byteArrayToHexString(receivedTS)
+							+"\nreceived AMNT: "+Converter.byteArrayToHexString(receivedAMNT)
+							+"\nreceived LATS: "+Converter.byteArrayToHexString(receivedLATS)
+							+"\nreceived SESN Header: "+Converter.byteArrayToHexString(receivedSesnHeader)
+							+"\nreceived SESN Payload: "+Converter.byteArrayToHexString(receivedSesnPayload));
+					
+					if(Arrays.equals(receivedSesnHeader, receivedSesnPayload) == false){
 						errorCode = 3;
 					}
+					
+					System.arraycopy(receivedPacket, 0, receivedPlainPacket, 0, 7);
+					System.arraycopy(decryptedPayload, 0, receivedPlainPacket, 7, decryptedPayload.length);
+					Arrays.fill(receivedPlainPacket, 7+decryptedPayload.length, 39, (byte) (32-decryptedPayload.length));
+					System.arraycopy(receivedIV, 0, receivedPlainPacket, 39, 16);
+					Log.d(TAG,"received plain packet: "+ Converter.byteArrayToHexString(receivedPlainPacket));
 				} catch (Exception e) {
 					e.printStackTrace();
 					Log.d(TAG,"exception thrown by decrypt log per row method");
@@ -227,6 +242,10 @@ public class Packet {
 		
 		public byte[] getReceivedLATS(){
 			return receivedLATS;
+		}
+		
+		public byte[] getReceivedPlainPacket(){
+			return receivedPlainPacket;
 		}
 	}
 }

@@ -91,7 +91,8 @@ public class History extends Activity{
     						error = true;
     					}
     					
-    					if(appdata.getACCN() != Converter.byteArrayToLong(accnP)){
+//    					if(appdata.getACCN() != Converter.byteArrayToLong(accnP)){
+						if(appdata.getACCN() != Converter.byteArrayToLong(accnM)){ //merchant
     						error = true;
     					}
     					
@@ -106,7 +107,9 @@ public class History extends Activity{
     					if(Converter.byteArrayToLong(accnM) == 0){
     						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), df.format(d)});
     					} else {
-    						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), String.valueOf(Converter.byteArrayToLong(accnM))+"\n"+df.format(d)});
+//    						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), String.valueOf(Converter.byteArrayToLong(accnM))+"\n"+df.format(d)});
+    						//merchant shows accn payer
+    						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), String.valueOf(Converter.byteArrayToLong(accnP))+"\n"+df.format(d)});
     					}
     					
     					cur.moveToNext();
@@ -154,8 +157,6 @@ public class History extends Activity{
 			                TextView text2 = (TextView) view.findViewById(android.R.id.text2);
 			                text1.setText(entry[0]);
 			                text2.setText(entry[1]);
-			                text1.setTextColor(Color.BLACK);
-			                text2.setTextColor(Color.DKGRAY);
 			                return view;
 			            }
 			        };

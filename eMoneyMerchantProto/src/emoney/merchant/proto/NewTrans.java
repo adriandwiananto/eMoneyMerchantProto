@@ -78,8 +78,9 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		int sesnInt = r.nextInt(High-Low) + Low;
 		
 		long timestamp = System.currentTimeMillis()/1000;
+		int timestampInt = Integer.valueOf(Long.valueOf(timestamp).intValue());
 		
-		Packet packet = new Packet(0, sesnInt, (int)timestamp, appdata.getACCN(), 0, aes_key);
+		Packet packet = new Packet(0, sesnInt, timestampInt, appdata.getACCN(), 0, aes_key);
 		byte[] packetArrayToSend = packet.buildTransPacket();
 		toSend = packet.createNDEFMessage("emoney/merchantRequest", packetArrayToSend);
 
@@ -126,11 +127,12 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 				sequence = 2;
 				byte[] accnInByteArray = Arrays.copyOfRange(Converter.longToByteArray(appdata.getACCN()), 2, 8);
 				LogDB ldb = new LogDB(this, log_key, accnInByteArray);
-		    	ldb.insertLastTransToLog(plainTransPacket);
+		    	ldb.insertLastTransToLog(prp.getReceivedPlainPacket());
 		    	
 		    	appdata.setLastTransTS(System.currentTimeMillis() / 1000);
 
 				Toast.makeText(getApplicationContext(), "Transaction Success!", Toast.LENGTH_LONG).show();
+				finish();
 			}
         }
 	}
