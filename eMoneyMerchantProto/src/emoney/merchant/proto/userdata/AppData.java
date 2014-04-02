@@ -75,6 +75,17 @@ public class AppData {
 	public long getLATS(){
 		return Pref.getLong("LATS", 0);
 	}
+	
+	public void setLastTransTS(long lastTransTS) {
+		// TODO Auto-generated method stub
+		Editor edit = Pref.edit();
+		edit.putLong("LastTransTS", lastTransTS);
+		edit.commit();
+	}
+	
+	public long getLastTransTS(){
+		return Pref.getLong("LastTransTS", 0);
+	}
 
 	public void setBalance(int Balance, byte[] balance_key) {
 		// TODO Auto-generated method stub

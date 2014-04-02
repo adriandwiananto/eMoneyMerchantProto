@@ -105,6 +105,8 @@ public class History extends Activity{
 
     					if(Converter.byteArrayToLong(accnM) == 0){
     						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), df.format(d)});
+    					} else {
+    						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), String.valueOf(Converter.byteArrayToLong(accnM))+"\n"+df.format(d)});
     					}
     					
     					cur.moveToNext();

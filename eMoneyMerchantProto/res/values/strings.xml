@@ -9,7 +9,7 @@
     <string name="bSettlement">Settlement</string>
     <string name="bOption">Option</string>
     <string name="bNewTransCancel">Cancel</string>
-    <string name="tNewTransSESN">Security Number:</string>
+    <string name="tNewTransSESN">Tap payer device</string>
     <string name="tOptionOldPass">Current PIN\t\t\t\t\t:</string>
     <string name="tOptionNewPass">New PIN\t\t\t\t\t\t:</string>
     <string name="tOptionConfPass">Confirm PIN\t\t\t\t\t:</string>

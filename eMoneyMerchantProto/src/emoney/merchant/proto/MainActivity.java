@@ -69,6 +69,7 @@ public class MainActivity extends Activity implements OnClickListener{
         }
     	
     	//UI Initialization
+    	pLoading = (ProgressBar)findViewById(R.id.pMain);
     	tDebug = (TextView)findViewById(R.id.tDebug);
     	bNewTrans = (Button) findViewById(R.id.bNewTrans);
     	bNewTrans.setOnClickListener(this);
@@ -91,8 +92,8 @@ public class MainActivity extends Activity implements OnClickListener{
         Log.d(TAG,"create new AppData class successfully");
         
         if(appdata.getACCN() == 0){
-//        	startActivity(new Intent(this, Register.class)); 
-        	startActivity(new Intent(this, NewTrans.class)); 
+        	startActivity(new Intent(this, Register.class)); 
+//        	startActivity(new Intent(this, NewTrans.class)); 
         	finish();
         }
         else{

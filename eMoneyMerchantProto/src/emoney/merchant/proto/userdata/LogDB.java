@@ -21,12 +21,19 @@ public class LogDB extends SQLiteOpenHelper{
 	private static String TABLE = "TransLog";
 	private static String CL_ID = "_id";
 	private static String CL_LOG = "_log";
+	private byte[] accn_M =  new byte[0];
 	
 	private byte[] logKey;
 	
 	public LogDB(Context c, byte[] log_key){
 		super(c, DBLNAME, null, 1);
 		logKey = log_key;
+	}
+	
+	public LogDB(Context c, byte[] log_key, byte[] accnMerchant){
+		super(c, DBLNAME, null, 1);
+		logKey = log_key;
+		accn_M = accnMerchant;
 	}
 	
 	@Override
@@ -52,7 +59,11 @@ public class LogDB extends SQLiteOpenHelper{
 		byte[] binaryID = new byte[4];
 		Arrays.fill(binaryID, (byte) 0);
 		byte[] accnM = new byte[6];
-		Arrays.fill(accnM, (byte) 0);
+		if(accn_M.length == 0){
+			Arrays.fill(accnM, (byte) 0);
+		} else {
+			System.arraycopy(accn_M, 0, accnM, 0, 6);
+		}
 		byte[] accnP = new byte[6];
 		System.arraycopy(transPacket, 7, accnP, 0, 6);
 		byte[] amount = new byte[4];

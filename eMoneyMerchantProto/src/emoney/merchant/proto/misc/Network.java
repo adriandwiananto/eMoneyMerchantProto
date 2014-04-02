@@ -19,7 +19,9 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.AsyncTask;
@@ -51,6 +53,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 	
 	private int param_mode;
 	private int error;
+	private String errorMessage;
 	
 	private Context ctx;
 	private AppData appdata;
@@ -103,6 +106,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 				JSONArray jarray_logs = new JSONArray();
 				JSONObject jobj_header = new JSONObject();
 				int logNum = cur.getCount();
+				int balance = 0;
 				
 				while((cur.isAfterLast() == false) && (error == 0)) {
 					int rowNum = cur.getInt(cur.getColumnIndex(ldb.getIDColumnName()));
@@ -123,6 +127,8 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
     					byte[] TS = Arrays.copyOfRange(decryptedLog, 24, 28);
     					byte STAT = decryptedLog[28];
     					byte CNL = decryptedLog[29];
+    					
+    					balance = balance + Converter.byteArrayToInteger(amnt);
     					
     					int array_index = rowNum - 1;
     					JSONObject json = new JSONObject();
@@ -154,7 +160,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 						String logs_hash = Converter.byteArrayToHexString(Hash.sha256Hash(jarray_logs.toString()));
 						jobj_header.put("signature", logs_hash);
 						jobj_header.put("last_sync_at", appdata.getLATS());
-						jobj_header.put("balance", appdata.getDecryptedBalance(balance_key));
+						jobj_header.put("balance", balance);
 					} catch (Exception e) {
 						e.printStackTrace();
 						error = 3;
@@ -207,6 +213,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 	@Override
 	protected void onPostExecute(JSONObject result) {
 		int returnBalance = 0;
+		int returnTS = 0;
 		boolean returnRenewKey = false;
 		String returnNewKey = "";
 		
@@ -239,17 +246,27 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 						keyEncryption_key = key.getKeyEncryptionKey();
 						balance_key = key.getBalanceKey();
 						
+						returnBalance = jobj_response.getInt("balance");
+						returnTS = jobj_response.getInt("last_sync_at");
 						appdata.setKey(aesKey, keyEncryption_key);						
-						appdata.setLATS(System.currentTimeMillis() / 1000);
-						appdata.setBalance(100000, balance_key);
-						appdata.setVerifiedBalance(100000, balance_key);
+						appdata.setLATS(returnTS);
+//						appdata.setBalance(returnBalance, balance_key);
+//						appdata.setVerifiedBalance(returnBalance, balance_key);
 						Log.d(TAG,"Finish writing shared pref");
 						
-						Toast.makeText(ctx, "Registration Success", Toast.LENGTH_LONG).show();
-						
-						((ProgressBar)parentActivity.findViewById(R.id.pReg)).setVisibility(View.INVISIBLE);
-						ctx.startActivity((new Intent(ctx, Login.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-						parentActivity.finish();
+						new AlertDialog.Builder(parentActivity)
+							.setTitle("Notification")
+							.setMessage("Registration Success\nBalance Rp. "+returnBalance)
+							.setNeutralButton("OK", new DialogInterface.OnClickListener()
+						{
+						    @Override
+						    public void onClick(DialogInterface dialog, int which) {
+						    	((ProgressBar)parentActivity.findViewById(R.id.pReg)).setVisibility(View.INVISIBLE);
+								ctx.startActivity((new Intent(ctx, Login.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+								parentActivity.finish();
+						    }
+						})
+						.show();
 					}
 				} catch (JSONException e) {
 					// TODO Auto-generated catch block
@@ -263,23 +280,27 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 					responseStatus = jobj_response.getString("result");
 					if(responseStatus.compareTo("Error") == 0){
 						error = 3;
+						errorMessage = jobj_response.getString("message");
 					}
 					if(responseStatus.compareTo("error") == 0){
 						error = 3;
+						errorMessage = jobj_response.getString("message");
 					}
 					
 					returnBalance = jobj_response.getInt("balance");
+					returnTS = jobj_response.getInt("last_sync_at");
 					JSONObject returnKey = jobj_response.getJSONObject("key");
 					returnRenewKey = returnKey.getBoolean("renew");
-					returnNewKey = returnKey.getString("new_key");
-					
+					if(returnRenewKey == true){
+						returnNewKey = returnKey.getString("new_key");
+					}
 				} catch (Exception e) {
 					e.printStackTrace();
 					error = 4;
 				}
 			}
 			else{
-				error = 4;
+				error = 99;
 				Log.d(TAG,"WTF -- What a Terible Failure. Param_mode not LOG or REG!");
 			}
 			
@@ -298,27 +319,45 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 			(parentActivity.findViewById(R.id.tRegDebug)).setVisibility(View.INVISIBLE);
 			(parentActivity.findViewById(R.id.pReg)).setVisibility(View.GONE);
 		} else if (param_mode == LOG_SYNC_MODE) { //error or no error, this will be executed after sync
-			(parentActivity.findViewById(R.id.pMain)).setVisibility(View.GONE);
-			(parentActivity.findViewById(R.id.bNewTrans)).setEnabled(true);
-			(parentActivity.findViewById(R.id.bHistory)).setEnabled(true);
-			(parentActivity.findViewById(R.id.bSettlement)).setEnabled(true);
-			(parentActivity.findViewById(R.id.bOption)).setEnabled(true);
-			
 			if(error == 0){
 				Log.d(TAG,"new balance:"+returnBalance);
-				appdata.setBalance(returnBalance, balance_key);
-				appdata.setVerifiedBalance(returnBalance, balance_key);
-				appdata.setLATS(System.currentTimeMillis() / 1000);
+//				appdata.setBalance(returnBalance, balance_key);
+//				appdata.setVerifiedBalance(returnBalance, balance_key);
+				appdata.setLATS(returnTS);
 				if(returnRenewKey == true){
 					appdata.setKey(Converter.hexStringToByteArray(returnNewKey), keyEncryption_key);
 					Log.d(TAG,"new key:"+returnNewKey);
 				}
 				LogDB.deleteDB(ctx);
-				Toast.makeText(ctx, "Sync success", Toast.LENGTH_LONG).show();
+				
+				new AlertDialog.Builder(parentActivity)
+					.setTitle("Notification")
+					.setMessage("Sync Success\nBalance Rp. "+returnBalance)
+					.setNeutralButton("OK", new DialogInterface.OnClickListener()
+				{
+				    @Override
+				    public void onClick(DialogInterface dialog, int which) {
+				    }
+				})
+				.show();
 			} else {
-				Toast.makeText(ctx, "Sync failed", Toast.LENGTH_LONG).show();
+				new AlertDialog.Builder(parentActivity)
+					.setTitle("Notification")
+					.setMessage("Sync Failed\n"+errorMessage)
+					.setNeutralButton("OK", new DialogInterface.OnClickListener()
+				{
+				    @Override
+				    public void onClick(DialogInterface dialog, int which) {
+				    }
+				})
+				.show();
+				Log.d(TAG,"error:"+error);
 			}
-			
+			(parentActivity.findViewById(R.id.pMain)).setVisibility(View.GONE);
+			(parentActivity.findViewById(R.id.bNewTrans)).setEnabled(true);
+			(parentActivity.findViewById(R.id.bHistory)).setEnabled(true);
+			(parentActivity.findViewById(R.id.bSettlement)).setEnabled(true);
+			(parentActivity.findViewById(R.id.bOption)).setEnabled(true);
 		}
 	}
     
