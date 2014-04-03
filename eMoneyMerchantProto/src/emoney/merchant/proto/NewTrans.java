@@ -40,11 +40,13 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 	Button bCancel;
 	TextView tDebug, tMsg;
 	private byte[] aes_key, log_key, balance_key;
-	private byte[] plainTransPacket;
 	private int sequence = 0;
+	private int sesnInt;
 	
 	ParseReceivedPacket prp;
-
+	
+	private String passExtra;
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -55,6 +57,7 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		aes_key = myIntent.getByteArrayExtra("aesKey");
 		log_key = myIntent.getByteArrayExtra("logKey");
 		balance_key = myIntent.getByteArrayExtra("balanceKey");
+		passExtra = myIntent.getStringExtra("Password");
 		
 		//UI Init
 		
@@ -75,7 +78,7 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		Random r = new Random();
 		int Low = 100; //inclusive
 		int High = 1000; //exclusive
-		int sesnInt = r.nextInt(High-Low) + Low;
+		sesnInt = r.nextInt(High-Low) + Low;
 		
 		long timestamp = System.currentTimeMillis()/1000;
 		int timestampInt = Integer.valueOf(Long.valueOf(timestamp).intValue());
@@ -89,11 +92,9 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		byte[] plainPayload = new byte[32];
 		System.arraycopy(packet.getPlainPacket(), 7, plainPayload, 0, 32);
 		
-		plainTransPacket = packet.getPlainPacket();
-		
 		tDebug.setText("Data packet to send:\n"+Converter.byteArrayToHexString(packetArrayToSend));
 		tDebug.append("\nPlain payload:\n"+Converter.byteArrayToHexString(plainPayload));
-		tDebug.append("\nCiphered payload:\n"+Converter.byteArrayToHexString(packet.getCipherPacket()));
+		tDebug.append("\nCiphered payload:\n"+Converter.byteArrayToHexString(packet.getCipherPayload()));
 		tDebug.append("\naes key:\n"+Converter.byteArrayToHexString(aes_key));
 		tDebug.setVisibility(View.VISIBLE);
 		
@@ -103,36 +104,48 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 	@Override
     public void onResume(){
     	super.onResume();
+		//called when device receive NFC intent
     	nfcAdapter.enableForegroundDispatch(this, mNfcPendingIntent, null, null);
     	if (NfcAdapter.ACTION_NDEF_DISCOVERED.equals(getIntent().getAction())) processIntent(getIntent());
     }
 	
 	private void processIntent(Intent intent) {
+		//debugging purpose
 		Log.d(TAG,"process intent");
 		tDebug.setText("beam intent found!\n");
+		
 		Parcelable[] rawMsgs = intent.getParcelableArrayExtra(NfcAdapter.EXTRA_NDEF_MESSAGES);
 		NdefMessage[] msgs;
 		if (rawMsgs != null) {
 			tDebug.append("ndef message found!\n");
+			
+			//get payload of received NFC data
 			msgs = new NdefMessage[rawMsgs.length];
 			for (int i = 0; i < rawMsgs.length; i++) {
 				msgs[i] = (NdefMessage) rawMsgs[i];
 			}
 			byte[] paymentData = msgs[0].getRecords()[0].getPayload();
 			
+			//parse received NFC data
 			prp = new Packet(aes_key).new ParseReceivedPacket(paymentData);
 			if(prp.getErrorCode() != 0){
 				Toast.makeText(getApplicationContext(), prp.getErrorMsg(), Toast.LENGTH_LONG).show();
 			} else {
 				sequence = 2;
-				byte[] accnInByteArray = Arrays.copyOfRange(Converter.longToByteArray(appdata.getACCN()), 2, 8);
-				LogDB ldb = new LogDB(this, log_key, accnInByteArray);
-		    	ldb.insertLastTransToLog(prp.getReceivedPlainPacket());
-		    	
-		    	appdata.setLastTransTS(System.currentTimeMillis() / 1000);
-
-				Toast.makeText(getApplicationContext(), "Transaction Success!", Toast.LENGTH_LONG).show();
-				finish();
+				int receivedSesn = Converter.byteArrayToInteger(prp.getReceivedSESN());
+				
+				if(receivedSesn == sesnInt){
+					byte[] accnInByteArray = Arrays.copyOfRange(Converter.longToByteArray(appdata.getACCN()), 2, 8);
+					LogDB ldb = new LogDB(this, log_key, accnInByteArray);
+			    	ldb.insertLastTransToLog(prp.getReceivedPlainPacket());
+			    	
+			    	appdata.setLastTransTS(System.currentTimeMillis() / 1000);
+	
+					Toast.makeText(getApplicationContext(), "Transaction Success!", Toast.LENGTH_LONG).show();
+					//finish();
+					//close pay activity and open main activity
+					backToMain();
+				}
 			}
         }
 	}
@@ -190,7 +203,9 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		{
 		    @Override
 		    public void onClick(DialogInterface dialog, int which) {
-		        finish();    
+		        //finish();
+				//close pay activity and open main activity
+				backToMain();
 		    }
 		
 		})
@@ -208,4 +223,11 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 			}
 		}
 	};
+	private void backToMain(){
+		//close this activity and open main activity with Password in Intent
+		Intent newIntent = new Intent(this,MainActivity.class);
+		newIntent.putExtra("Password", passExtra);
+		startActivity(newIntent);
+		finish();
+	}
 }

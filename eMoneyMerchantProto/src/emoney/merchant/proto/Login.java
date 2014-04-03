@@ -33,10 +33,10 @@ public class Login extends Activity implements OnClickListener {
 		setContentView(R.layout.login);
 		
 		appdata = new AppData(this);
-		
+
+		//debugging purpose
 		Date d = new Date(appdata.getLATS()*1000);
 		SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.US);
-		
 		Log.d(TAG,"Write debug textview!");
 		loginDebug = (TextView)findViewById(R.id.tLoginDebug);
 		loginDebug.setText("ACCN : "+String.valueOf(appdata.getACCN()));
@@ -48,6 +48,7 @@ public class Login extends Activity implements OnClickListener {
 		Log.d(TAG,"key:"+appdata.getEncryptedKey());
 		loginDebug.append("\nWrapped Key+Iv : "+ appdata.getEncryptedKey());
 		
+		//set button listener
 		((Button)findViewById(R.id.bLoginProceed)).setOnClickListener(this);
 		((Button)findViewById(R.id.bLoginCancel)).setOnClickListener(this);
 	}
@@ -63,15 +64,20 @@ public class Login extends Activity implements OnClickListener {
 		Intent myIntent = new Intent(this, MainActivity.class);
 		switch(v.getId()){
 			case R.id.bLoginProceed:
+				//hide soft keyboard
 				InputMethodManager inputManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE); 
 				inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),InputMethodManager.HIDE_NOT_ALWAYS);
 				
+				//get string from edit text
 				password = ((EditText)findViewById(R.id.eLoginPassword)).getText().toString();
 				String passSalt = password.concat(String.valueOf(appdata.getIMEI()));
 				
+				//hash entered password and salt
 				byte[] hashed = Hash.sha256Hash(passSalt);
 				String hashedStr = Converter.byteArrayToHexString(hashed);
 				
+				//compare previously created hashed password with hashed password in appdata
+				//if ok, close this activity and launch main activity with "Password" field in Intent
 				if(hashedStr.compareTo(appdata.getPass()) == 0){
 					myIntent.putExtra("Password", password);
 					startActivity(myIntent);

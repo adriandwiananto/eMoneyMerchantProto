@@ -5,6 +5,12 @@ import java.security.NoSuchAlgorithmException;
 
 public class Hash {
 	
+	/** 
+	 * Hash text using SHA 256 cryptographic hash algorithm
+	 * 
+	 * @param text Text to be hashed
+	 * @return Hashed text
+	 */
 	public static byte[] sha256Hash(String text) {
 		MessageDigest digest=null;
 		try {

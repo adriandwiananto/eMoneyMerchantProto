@@ -37,6 +37,7 @@ public class History extends Activity{
 	private List<String[]> colorList;
 	private boolean error;
 	private AppData appdata;
+	private String passExtra;
 	
 	@Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -45,35 +46,42 @@ public class History extends Activity{
 
         error = false;
         
+        //get log key and password from Intent
         Intent myIntent = getIntent();
 		log_key = myIntent.getByteArrayExtra("logKey");
+		passExtra = myIntent.getStringExtra("Password");
 	
 		appdata = new AppData(this);
 		colorList = new LinkedList<String[]>();
 		
+		//UI purpose
         lv = (ListView)findViewById(R.id.LVH);
         pHistory = (ProgressBar)findViewById(R.id.pHistory);
         tMsg = (TextView)findViewById(R.id.tHistoryMsg);
-        
         pHistory.setVisibility(View.VISIBLE);
 		lv.setVisibility(View.GONE);
 		tMsg.setVisibility(View.GONE);
+		
+		//decrypt and parse log in separate thread
+		//put log to listview
         refreshListView();
     }
 
 	private void refreshListView() {
-		// TODO Auto-generated method stub
-
+		//new thread
         Runnable runnable = new Runnable(){
     		public void run(){
     			Message msg = handler.obtainMessage();
     			LogDB db = new LogDB(getApplicationContext(), log_key);
     	        cur = db.getLogBlob();
-    			while((cur.isAfterLast() == false) && (error == false)){
+    	        
+    	        //decrypt and parse all row of log db
+    	        while((cur.isAfterLast() == false) && (error == false)){
     				int rowNum = cur.getInt(cur.getColumnIndex(db.getIDColumnName()));
 
     				LogOperation lo = db.new LogOperation();
-    				byte[] decryptedLog = lo.getDecrpytedLogPerRow(cur, log_key);
+//    				byte[] decryptedLog = lo.getDecrpytedLogPerRow(cur, log_key);
+    				byte[] decryptedLog = lo.getDecrpytedLogPerRow(cur);
     				error = lo.getError();
     				
     				if(error == false){
@@ -87,23 +95,31 @@ public class History extends Activity{
 //    					byte STAT = decryptedLog[28];
 //    					byte CNL = decryptedLog[29];
     					
+    					//log integrity checking
+    					//check if log NUM field is same with log row number in db
     					if(rowNum != Converter.byteArrayToInteger(NUM)){
     						error = true;
     					}
     					
-//    					if(appdata.getACCN() != Converter.byteArrayToLong(accnP)){
-						if(appdata.getACCN() != Converter.byteArrayToLong(accnM)){ //merchant
+    					//log integrity checking
+    					//check if log ACCN-M field is same with ACCN in appdata
+    					if(appdata.getACCN() != Converter.byteArrayToLong(accnM)){
     						error = true;
     					}
     					
+    					//log integrity checking
+    					//check if PT field == 1 (offline transaction)
     					if(PT != 1){
     						error = true;
     					}
     					
+    					//create simple date format of log timestamp
     					Date d = new Date(Converter.byteArrayToLong(TS)*1000);
     					SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.US);
     					Log.d(TAG,"timestamp: "+df.format(d));
 
+    					//if ACCN-M is empty, write only amount and date
+    					//if ACCN-M is NOT empty, write amount, ACCN-M, and date
     					if(Converter.byteArrayToLong(accnM) == 0){
     						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), df.format(d)});
     					} else {
@@ -127,6 +143,20 @@ public class History extends Activity{
     	Thread historyListView = new Thread(runnable);
     	historyListView.start();
 	}
+
+	@Override
+	public void onBackPressed() {
+		//when user press back button
+		backToMain();
+	}
+	
+	private void backToMain(){
+		//close this activity and open main activity with Password in Intent (to prevent opening of login activity)
+		Intent newIntent = new Intent(this,MainActivity.class);
+		newIntent.putExtra("Password", passExtra);
+		startActivity(newIntent);
+		finish();
+	}
 	
 	@SuppressLint("HandlerLeak")
 	Handler handler = new Handler() {
@@ -138,6 +168,8 @@ public class History extends Activity{
 			
 			if(error == false){
 				if(logRow > 0){
+					//Write list to ListView
+					
 					pHistory.setVisibility(View.GONE);
 					lv.setVisibility(View.VISIBLE);
 					tMsg.setVisibility(View.GONE);

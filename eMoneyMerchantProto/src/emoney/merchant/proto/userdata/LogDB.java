@@ -25,11 +25,22 @@ public class LogDB extends SQLiteOpenHelper{
 	
 	private byte[] logKey;
 	
+	/**
+	 * Use this constructor if you want to call insertLastTransToLog method without known merchant ACCN  
+	 * @param c
+	 * @param log_key
+	 */
 	public LogDB(Context c, byte[] log_key){
 		super(c, DBLNAME, null, 1);
 		logKey = log_key;
 	}
 	
+	/**
+	 * Use this constructor if you want to call insertLastTransToLog method with known merchant ACCN
+	 * @param c
+	 * @param log_key
+	 * @param accnMerchant
+	 */
 	public LogDB(Context c, byte[] log_key, byte[] accnMerchant){
 		super(c, DBLNAME, null, 1);
 		logKey = log_key;
@@ -47,6 +58,11 @@ public class LogDB extends SQLiteOpenHelper{
 		
 	}
 	
+	/**
+	 * insert last transaction to log
+	 * @param transPacket transaction data packet with unencrypted payload
+	 * @return row number in database
+	 */
 	public long insertLastTransToLog(byte[] transPacket){
 		Log.d(TAG,"transaction packet: "+Converter.byteArrayToHexString(transPacket));
 		SQLiteDatabase db = getWritableDatabase();
@@ -113,11 +129,17 @@ public class LogDB extends SQLiteOpenHelper{
 		return rowid;
 	}
 	
-	public long rowCountLog(){
+	/**
+	 * @return number of row in database
+	 */
+	private long rowCountLog(){
 		SQLiteDatabase db = getReadableDatabase();
 		return DatabaseUtils.queryNumEntries(db, TABLE);
 	}
 	
+	/**
+	 * @return cursor to first index in log column
+	 */
 	public Cursor getLogBlob(){
 		SQLiteDatabase db = getReadableDatabase();
 		Cursor c = db.query(TABLE, new String[]{CL_ID, CL_LOG}, null, null, null, null, CL_ID);
@@ -128,11 +150,22 @@ public class LogDB extends SQLiteOpenHelper{
 	public class LogOperation{
 		private boolean error;
 		private final static String TAG = "{SubClass} LogOperation";
+		
+		/**
+		 * Subclass constructor for log operation
+		 */
 		public LogOperation(){
 			error = false;
 		}
 		
-		public byte[] getDecrpytedLogPerRow(Cursor cur, byte[] log_key){
+		/**
+		 * get decrypted log in row pointed by Cursor cur
+		 * @param cur
+		 * @param log_key
+		 * @return decrypted log
+		 */
+//		public byte[] getDecrpytedLogPerRow(Cursor cur, byte[] log_key){
+		public byte[] getDecrpytedLogPerRow(Cursor cur){
 			byte[] encryptedLog = cur.getBlob(cur.getColumnIndex(CL_LOG));
 			Log.d(TAG,"encryptedLog: "+Converter.byteArrayToHexString(encryptedLog));
 			byte[] iv = Arrays.copyOfRange(encryptedLog, 32, 48);
@@ -141,7 +174,8 @@ public class LogDB extends SQLiteOpenHelper{
 			byte[] decryptedLog = new byte[32];
 			
 			try{
-				decryptedLog = AES256cipher.decrypt(iv, log_key, logOnly);
+				//decryptedLog = AES256cipher.decrypt(iv, log_key, logOnly);
+				decryptedLog = AES256cipher.decrypt(iv, logKey, logOnly);
 				Log.d(TAG,"decryptedLog: "+Converter.byteArrayToHexString(decryptedLog));
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -152,6 +186,11 @@ public class LogDB extends SQLiteOpenHelper{
 			return decryptedLog;
 		}
 		
+		/**
+		 * change log key to newLogKey
+		 * @param newLogKey
+		 * @return true if success, otherwise returns false
+		 */
 		public boolean changeLogKey(byte[] newLogKey){
 			SQLiteDatabase db = getWritableDatabase();
 			ContentValues CV =  new ContentValues();
@@ -168,7 +207,8 @@ public class LogDB extends SQLiteOpenHelper{
 					int rowNum = c.getInt(c.getColumnIndex(CL_ID));
 					Log.d(TAG,"current operation on row:"+rowNum);
 					try{
-						byte[] decryptedLog = this.getDecrpytedLogPerRow(c, logKey);
+//						byte[] decryptedLog = this.getDecrpytedLogPerRow(c, logKey);
+						byte[] decryptedLog = this.getDecrpytedLogPerRow(c);
 						if(error == true){
 							Log.d(TAG,"error decrypt");
 							return false;

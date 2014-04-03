@@ -37,6 +37,7 @@ public class Option extends Activity implements OnClickListener{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.option);
 		
+		//get extras from Intent
 		Intent myIntent = getIntent();
 		aes_key = myIntent.getByteArrayExtra("aesKey");
 		log_key = myIntent.getByteArrayExtra("logKey");
@@ -46,6 +47,7 @@ public class Option extends Activity implements OnClickListener{
 		appdata = new AppData(this);
 		currentActivity = Option.this;
 		
+		//UI purpose
 		proceed = (Button)findViewById(R.id.bOptionProceed);
 		proceed.setOnClickListener(this);
 		cancel = (Button)findViewById(R.id.bOptionCancel);
@@ -61,39 +63,51 @@ public class Option extends Activity implements OnClickListener{
 		// TODO Auto-generated method stub
 		switch(v.getId()){
 			case R.id.bOptionProceed:
+				//hide soft keyboard
 				InputMethodManager inputManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE); 
 				inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),InputMethodManager.HIDE_NOT_ALWAYS);
 				
+				//get string from edit text
 				curPassStr = curPass.getText().toString();
 				newPassStr = newPass.getText().toString();
 				confPassStr = confPass.getText().toString();
 				
+				//make sure new password is not empty
 				if(newPassStr.length() < 1){
 					Toast.makeText(getApplicationContext(), "Please input new password", Toast.LENGTH_SHORT).show();
 					return;
 				}
 				
+				//make sure confirm password is same with new password
 				if(newPassStr.compareTo(confPassStr) != 0){
 					Toast.makeText(getApplicationContext(), "Incorrect new password confirmation", Toast.LENGTH_SHORT).show();
 					return;
 				}
 				
+				//get hashed value of current password
 				String passSalt = curPassStr.concat(String.valueOf(appdata.getIMEI()));
 				byte[] hashed = Hash.sha256Hash(passSalt);
 				String hashedStr = Converter.byteArrayToHexString(hashed);
 				
+				//make sure current password hashed value same with value stored in appdata
 				if((hashedStr.compareTo(appdata.getPass()) != 0) && (curPassStr.compareTo(passExtra) != 0)){
 					Toast.makeText(getApplicationContext(), "Incorrect password", Toast.LENGTH_SHORT).show();
 					return;
 				}
 				
+				//UI purpose
 				proceed.setEnabled(false);
 				cancel.setEnabled(false);
 				pOption.setVisibility(View.VISIBLE);
+				
+				//run in separate thread
+				//derive keys from new password
+				//decrypt aes key, balance, log with old key then encrypt with new key
 				Runnable runnable = new Runnable(){
 					public void run(){
 						Message msg = handler.obtainMessage();
 						
+						//derive keys with new password
 						KeyDerive kd = new KeyDerive();
 						kd.deriveKey(newPassStr, String.valueOf(appdata.getIMEI()));
 						byte[] newBalance_key = kd.getBalanceKey();
@@ -101,12 +115,16 @@ public class Option extends Activity implements OnClickListener{
 						byte[] newKeyEncryption_key = kd.getKeyEncryptionKey();
 						
 						Bundle bundle = new Bundle();
-						
+
+						//change log key
 						LogDB ldb = new LogDB(getApplicationContext(), log_key);
 						LogOperation lo = ldb.new LogOperation();
-						
 						if(lo.changeLogKey(newLog_key) == true)
 						{
+							//if no error in change log key
+							//write new hashed password value to appdata
+							//encrypt balance with new key
+							//encrypt aes key with new key
 							int balance = appdata.getDecryptedBalance(balance_key);
 							int verifiedBalance = appdata.getDecryptedVerifiedBalance(balance_key);
 							
@@ -126,16 +144,18 @@ public class Option extends Activity implements OnClickListener{
 				changePassword.start();
 				break;
 			case R.id.bOptionCancel:
-				Intent newIntent = new Intent(this,MainActivity.class);
-				newIntent.putExtra("Password", passExtra);
-				startActivity(newIntent);
-				finish();
+				backToMain();
 				break;
 		}
 	}
 	
 	@Override
 	public void onBackPressed() {
+		backToMain();
+	}
+	
+	private void backToMain(){
+		//close this activity and open main activity with old password in Intent
 		Intent newIntent = new Intent(this,MainActivity.class);
 		newIntent.putExtra("Password", passExtra);
 		startActivity(newIntent);
@@ -146,6 +166,7 @@ public class Option extends Activity implements OnClickListener{
 	Handler handler = new Handler() {
 		@Override
 		public void handleMessage(Message msg) {
+			//UI purpose
 			pOption.setVisibility(View.GONE);
 			proceed.setEnabled(true);
 			cancel.setEnabled(true);
@@ -155,6 +176,8 @@ public class Option extends Activity implements OnClickListener{
 			if(error == true){
 				Toast.makeText(getApplicationContext(), "Password changing error!", Toast.LENGTH_LONG).show();
 			} else {
+				//if no error in changing password, close this option activity and open login activity
+				//user need to input newly changed password in login activity
 				Toast.makeText(getApplicationContext(), "Password changed successfully!", Toast.LENGTH_LONG).show();
 	    		startActivity(new Intent(currentActivity, Login.class));
 				currentActivity.finish();

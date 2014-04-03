@@ -62,6 +62,15 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 	
 	private byte[] keyEncryption_key, log_key, balance_key;
 	
+	/**
+	 * USE THIS CONSTRUCTOR TO SEND HTTP POST REGISTRATION DATA
+	 * @param parent parent activity
+	 * @param context caller context
+	 * @param jobj JSON object of registration data
+	 * @param NewPass new password inputted in registration activity
+	 * @param ACCNtoSend ACCN inputted in registration activity
+	 * @param HWID phone IMEI
+	 */
 	public Network(Activity parent, Context context, JSONObject jobj, String NewPass, String ACCNtoSend, String HWID){
 		ctx = context;
 		parentActivity = parent;
@@ -78,6 +87,14 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 		data = jobj.toString();
 	}
 	
+	/**
+	 * USE THIS CONSTRUCTOR TO SEND HTTP POST LOG SYNCHRONIZATION DATA
+	 * @param parent parent activity
+	 * @param context caller context
+	 * @param keyEncryptionKey key encryption key
+	 * @param logKey log key
+	 * @param balanceKey balance key
+	 */
 	public Network(Activity parent, Context context, byte[] keyEncryptionKey, byte[] logKey, byte[] balanceKey) {
 		// TODO Auto-generated constructor stub
 		ctx = context;
@@ -95,12 +112,14 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 	@Override
 	protected JSONObject doInBackground(Void... params) {
 		try {
+			//HTTP POST preparation
 			HttpClient httpclient = new DefaultHttpClient();
 			HttpPost httppost = new HttpPost(hostname);
 
-			// Add your data
+			// Add data
 			List<NameValuePair> nameValuePairs = new ArrayList<NameValuePair>(2);
 			if(param_mode == LOG_SYNC_MODE){
+				//build JSON object for sync mode
 				LogDB ldb = new LogDB(ctx, log_key);
 				Cursor cur = ldb.getLogBlob();
 				JSONArray jarray_logs = new JSONArray();
@@ -108,16 +127,21 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 				int logNum = cur.getCount();
 				int balance = 0;
 				
+				//decrypt and parse all log, then create json object of each row
+				//JSON object for each row will be added to JSON array of SYNC logs
 				while((cur.isAfterLast() == false) && (error == 0)) {
+					//rowNum = log row number pointed by cursor cur
 					int rowNum = cur.getInt(cur.getColumnIndex(ldb.getIDColumnName()));
 
     				LogOperation lo = ldb.new LogOperation();
-    				byte[] decryptedLog = lo.getDecrpytedLogPerRow(cur, log_key);
+//    				byte[] decryptedLog = lo.getDecrpytedLogPerRow(cur, log_key);
+    				byte[] decryptedLog = lo.getDecrpytedLogPerRow(cur);
     				if(lo.getError() == true) {
     					error = 1;
     				}
     				
     				if(error == 0){
+    					//parse decrypted log to it's respective field
     					byte[] NUM = Arrays.copyOfRange(decryptedLog, 0, 3);
     					byte PT = decryptedLog[3];
     					byte[] binaryID = Arrays.copyOfRange(decryptedLog, 4, 8);
@@ -129,7 +153,9 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
     					byte CNL = decryptedLog[29];
     					
     					balance = balance + Converter.byteArrayToInteger(amnt);
-    					
+						
+						//create JSON object from previously parsed log
+    					//put newly created JSON object into JSON array
     					int array_index = rowNum - 1;
     					JSONObject json = new JSONObject();
     					
@@ -152,6 +178,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
     				cur.moveToNext();
 				}
 				
+				//create JSON object of SYNC header
 				if(error == 0) {
 					try {
 						jobj_header.put("ACCN", appdata.getACCN());
@@ -166,14 +193,22 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 						error = 3;
 					}
 				}
+				
+				//add JSON object of SYNC header to header param of HTTP POST
+				//add JSON array of SYNC logs to logs param of HTTP POST
 				nameValuePairs.add(new BasicNameValuePair("header", jobj_header.toString()));
 				nameValuePairs.add(new BasicNameValuePair("logs", jarray_logs.toString()));
+				
+				//debugging purpose
+				//create JSON object consisting JSON object of SYNC header and JSON array of SYNC logs
+				//print to logcat
 				JSONObject jobj_print = new JSONObject();
 				jobj_print.put("header", jobj_header);
 				jobj_print.put("logs", jarray_logs);
 				Log.d(TAG,"sync http post param:\n"+jobj_print.toString());
 			}
 			else if(param_mode == REGISTRATION_MODE){
+				//add JSON object of REGISTRATION to data param of HTTP POST
 				nameValuePairs.add(new BasicNameValuePair("data", data));
 			}
 			else{
@@ -181,11 +216,13 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 				return null;
 			}
 			
+			//add name value pairs List to HttpPost 
 			httppost.setEntity(new UrlEncodedFormEntity(nameValuePairs));
 
 			// Execute HTTP Post Request
 			HttpResponse response = httpclient.execute(httppost);
 			
+			// Get response and return it in JSON Object type
 			BufferedReader reader = new BufferedReader(new InputStreamReader(response.getEntity().getContent(), "UTF-8"));
 			String json = reader.readLine();
 			JSONTokener tokener = new JSONTokener(json);
@@ -203,6 +240,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 
 	@Override
 	protected void onPreExecute() {
+		//Toast this message before doInBackground starts
 		if(param_mode == REGISTRATION_MODE){
 			Toast.makeText(ctx, "Registration Starts", Toast.LENGTH_SHORT).show();	
 		} else {
@@ -212,13 +250,13 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 	 
 	@Override
 	protected void onPostExecute(JSONObject result) {
+		//this method will be called after doInBackground finished
 		int returnBalance = 0;
 		int returnTS = 0;
 		boolean returnRenewKey = false;
 		String returnNewKey = "";
 		
 		if (error == 0) {
-			// do something
 			jobj_response = result;
 
 			if(param_mode == REGISTRATION_MODE){
@@ -226,34 +264,46 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 				try {
 					responseStatus = jobj_response.getString("result");
 					
-					if(responseStatus.compareTo("Error") == 0){
+					//if result from HTTP POST response error
+					if((responseStatus.compareTo("Error") == 0) || (responseStatus.compareTo("error") == 0)){
 						String errorMessage = jobj_response.getString("message");
 						Toast.makeText(ctx, "Registration failed!! "+errorMessage, Toast.LENGTH_LONG).show();
 						appdata.deleteAppData();
 						error = 3;
-					}
-					else{
+					} else { 
+						//if no error
+						//get aes key from HTTP POST response and convert it to byte array
 						String responseKey = jobj_response.getString("key");
 						byte[] aesKey = new byte[responseKey.length()/2];
 						aesKey = Converter.hexStringToByteArray(responseKey.toString());
 						Log.d(TAG,"aesKey byte array:"+Arrays.toString(aesKey));
 						
+						//write ACCN to appdata
+						//write password to appdata (hashed)
 						Log.d(TAG,"Start writing shared pref");
 						appdata.setACCN(Long.parseLong(newACCN));
 						appdata.setPass(newPassword);
 						
+						//derive keys (balance key and key encryption key) from password
 						key.deriveKey(newPassword, newIMEI);
 						keyEncryption_key = key.getKeyEncryptionKey();
 						balance_key = key.getBalanceKey();
-						
+
+						//get balance and last sync timestamp from HTTP post response
 						returnBalance = jobj_response.getInt("balance");
 						returnTS = jobj_response.getInt("last_sync_at");
+						
+						//wrap aes key using key encryption key and then write aes key to appdata
+						//write last sync timestamp to appdata
+						//write encrypted balance to appdata
+						//write encrypted verified balance to appdata
 						appdata.setKey(aesKey, keyEncryption_key);						
 						appdata.setLATS(returnTS);
 //						appdata.setBalance(returnBalance, balance_key);
 //						appdata.setVerifiedBalance(returnBalance, balance_key);
 						Log.d(TAG,"Finish writing shared pref");
-						
+	
+						//notification dialog for registration success					
 						new AlertDialog.Builder(parentActivity)
 							.setTitle("Notification")
 							.setMessage("Registration Success\nBalance Rp. "+returnBalance)
@@ -261,6 +311,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 						{
 						    @Override
 						    public void onClick(DialogInterface dialog, int which) {
+								//close registration activity and start login activity
 						    	((ProgressBar)parentActivity.findViewById(R.id.pReg)).setVisibility(View.INVISIBLE);
 								ctx.startActivity((new Intent(ctx, Login.class)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
 								parentActivity.finish();
@@ -277,6 +328,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 			else if(param_mode == LOG_SYNC_MODE){
 				String responseStatus;
 				try {
+					//if result in http post response is error, set error value
 					responseStatus = jobj_response.getString("result");
 					if(responseStatus.compareTo("Error") == 0){
 						error = 3;
@@ -287,12 +339,19 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 						errorMessage = jobj_response.getString("message");
 					}
 					
-					returnBalance = jobj_response.getInt("balance");
-					returnTS = jobj_response.getInt("last_sync_at");
-					JSONObject returnKey = jobj_response.getJSONObject("key");
-					returnRenewKey = returnKey.getBoolean("renew");
-					if(returnRenewKey == true){
-						returnNewKey = returnKey.getString("new_key");
+					//if no error, continue parse http post response
+					if(error == 0){
+						//get balance
+						//get last sync timestamp
+						//check if key renew true
+						//if key renew true, get new key
+						returnBalance = jobj_response.getInt("balance");
+						returnTS = jobj_response.getInt("last_sync_at");
+						JSONObject returnKey = jobj_response.getJSONObject("key");
+						returnRenewKey = returnKey.getBoolean("renew");
+						if(returnRenewKey == true){
+							returnNewKey = returnKey.getString("new_key");
+						}
 					}
 				} catch (Exception e) {
 					e.printStackTrace();
@@ -312,14 +371,19 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 		}
 		
 		
-		//if error, new activity isn't called then execute bellow code
 		if(param_mode == REGISTRATION_MODE){
+			//if error in registration mode, new activity isn't called then execute bellow code
+			//change in UI
 			(parentActivity.findViewById(R.id.bRegConfirm)).setEnabled(true);
 			(parentActivity.findViewById(R.id.bRegCancel)).setEnabled(true);
 			(parentActivity.findViewById(R.id.tRegDebug)).setVisibility(View.INVISIBLE);
 			(parentActivity.findViewById(R.id.pReg)).setVisibility(View.GONE);
-		} else if (param_mode == LOG_SYNC_MODE) { //error or no error, this will be executed after sync
+		} else if (param_mode == LOG_SYNC_MODE) { 
+			//in log sync mode, error or no error, this will be executed
 			if(error == 0){
+				//if no error in parse http post response, write balance to appdata (both unverified and verified get updated)
+				//write last sync timestamp to appdata
+				//if server sends new key, wrap new key and write to appdata
 				Log.d(TAG,"new balance:"+returnBalance);
 //				appdata.setBalance(returnBalance, balance_key);
 //				appdata.setVerifiedBalance(returnBalance, balance_key);
@@ -328,8 +392,10 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 					appdata.setKey(Converter.hexStringToByteArray(returnNewKey), keyEncryption_key);
 					Log.d(TAG,"new key:"+returnNewKey);
 				}
+				//if sync success, delete all entries in log database
 				LogDB.deleteDB(ctx);
 				
+				//notification dialog about sync success
 				new AlertDialog.Builder(parentActivity)
 					.setTitle("Notification")
 					.setMessage("Sync Success\nBalance Rp. "+returnBalance)
@@ -341,6 +407,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 				})
 				.show();
 			} else {
+				//notification dialog about sync failed
 				new AlertDialog.Builder(parentActivity)
 					.setTitle("Notification")
 					.setMessage("Sync Failed\n"+errorMessage)
@@ -353,31 +420,13 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 				.show();
 				Log.d(TAG,"error:"+error);
 			}
+			
+			//change in UI
 			(parentActivity.findViewById(R.id.pMain)).setVisibility(View.GONE);
 			(parentActivity.findViewById(R.id.bNewTrans)).setEnabled(true);
 			(parentActivity.findViewById(R.id.bHistory)).setEnabled(true);
 			(parentActivity.findViewById(R.id.bSettlement)).setEnabled(true);
 			(parentActivity.findViewById(R.id.bOption)).setEnabled(true);
 		}
-	}
-    
-	public String getData(){
-		return data;
-	}
-	
-	public String getHeader(){
-		return header;
-	}
-	
-	public String getLogs(){
-		return logs;
-	}
-	
-	public int getError(){
-		return error;
-	}
-	
-	public JSONObject getResponse(){
-		return jobj_response;
 	}
 }

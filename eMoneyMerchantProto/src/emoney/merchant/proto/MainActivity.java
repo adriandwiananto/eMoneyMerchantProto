@@ -60,7 +60,7 @@ public class MainActivity extends Activity implements OnClickListener{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		
-		// Init
+		// Init NFC
         nfcA = NfcAdapter.getDefaultAdapter(this);
         // no nfc device
     	if (nfcA == null){
@@ -84,6 +84,7 @@ public class MainActivity extends Activity implements OnClickListener{
         bOption.setOnClickListener(this);
         bOption.setEnabled(false);
         
+        //get device IMEI
     	TelephonyManager T = (TelephonyManager)getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
 		String IMEI = T.getDeviceId();
 		lIMEI = Long.parseLong(IMEI);
@@ -91,41 +92,48 @@ public class MainActivity extends Activity implements OnClickListener{
         appdata = new AppData(getApplicationContext());
         Log.d(TAG,"create new AppData class successfully");
         
+        //if ACCN empty, open register activity and close main activity
         if(appdata.getACCN() == 0){
         	startActivity(new Intent(this, Register.class)); 
-//        	startActivity(new Intent(this, NewTrans.class)); 
         	finish();
         }
         else{
-        	
+        	//check if registered IMEI in appdata is same with current IMEI
         	if(appdata.getIMEI() != lIMEI){
         		Toast.makeText(getApplicationContext(), "Registered device not same with current device", Toast.LENGTH_LONG).show();
         		finish();
         	}
 
+        	//get intent myIntent
         	Intent myIntent = getIntent();
         	
+        	//if Password field in myIntent empty, it means this app is just started.
+        	//open login activity and close main activity
+        	//if login success main activity will be opened again with not empty Password field in myIntent
         	if(myIntent.getStringExtra("Password") == null){
         		startActivity(new Intent(this, Login.class));
         		finish();
         	}else{
+        		//get password entered in login activity
 	        	password = myIntent.getStringExtra("Password");
 	        	Log.d(TAG,"Password:"+password);
 	        	
+	        	//derive balance key, log key, and key encryption key in separate thread
+	        	//get decrypted balance
     			key = new KeyDerive();
 
 	        	Runnable runnable = new Runnable(){
 	        		public void run(){
 	        			Message msg = handler.obtainMessage();
 	        			key.deriveKey(password, String.valueOf(lIMEI));
-	        			int decryptedBalance = appdata.getDecryptedBalance(key.getBalanceKey());
+	        			//int decryptedBalance = appdata.getDecryptedBalance(key.getBalanceKey());
 	        			keyEncryption_key = key.getKeyEncryptionKey();
 	        			aes_key = appdata.getDecryptedKey(keyEncryption_key);
 	        			log_key = key.getLogKey();
 	        			balance_key = key.getBalanceKey();
 	        			
 	        			Bundle bundle = new Bundle();
-	        			bundle.putString("Balance", String.valueOf(decryptedBalance));
+	        			//bundle.putString("Balance", String.valueOf(decryptedBalance));
 	        			msg.setData(bundle);
 	        			handler.sendMessage(msg);
 	        		}
@@ -140,6 +148,7 @@ public class MainActivity extends Activity implements OnClickListener{
 	@Override
     protected void onResume() {
         super.onResume();
+        //check if nfc enabled. if nfc is disabled, create dialog to offer enabling nfc in wireless setting
         if (nfcA != null) {
             if (!nfcA.isEnabled()) {
                 showWirelessSettingsDialog();
@@ -152,32 +161,41 @@ public class MainActivity extends Activity implements OnClickListener{
 		// TODO Auto-generated method stub
 		switch (v.getId()){
 			case R.id.bNewTrans:
+				//user choose new trans mode
+				//this activity will be closed and new trans activity will be opened
 				Intent payIntent = new Intent(this, NewTrans.class);
 				payIntent.putExtra("Password", password);
 				payIntent.putExtra("aesKey", aes_key);
 				payIntent.putExtra("logKey", log_key);
 				payIntent.putExtra("balanceKey", balance_key);
 				startActivity(payIntent);
+				finish();
 				break;
 			case R.id.bHistory:
+				//user choose history mode
+				//this activity will be closed and history activity will be opened
 				Intent historyIntent = new Intent(this, History.class);
 				historyIntent.putExtra("Password", password);
 				historyIntent.putExtra("logKey", log_key);
 				startActivity(historyIntent);
+				finish();
 				break;
 			case R.id.bSettlement:
-				//new thread
-				//http post
+				//user tap sync mode
+				//disable all button, show progress bar
 				pLoading.setVisibility(View.VISIBLE);
 				bNewTrans.setEnabled(false);
 				bHistory.setEnabled(false);
 				bSettlement.setEnabled(false);
 				bOption.setEnabled(false);
 				
+				//do sync in separate thread
 				Network sync = new Network(MainActivity.this, getApplicationContext(), keyEncryption_key, log_key, balance_key);
 				sync.execute();
 				break;
 			case R.id.bOption:
+				//user choose option mode
+				//this activity will be closed and option activity will be opened
 				Intent optionIntent = new Intent(this, Option.class);
 				optionIntent.putExtra("Password", password);
 				optionIntent.putExtra("aesKey", aes_key);
@@ -189,6 +207,11 @@ public class MainActivity extends Activity implements OnClickListener{
 		}
 	}
 	
+	/**
+	 * create dialog that prompt user to enable nfc in wireless setting
+	 * <br>if possitive button tapped, open wireless setting
+	 * <br>if negative button tapped, finish this activity
+	 */
 	private void showWirelessSettingsDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setMessage(R.string.nfc_disabled);
