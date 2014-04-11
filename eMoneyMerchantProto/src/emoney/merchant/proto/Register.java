@@ -20,10 +20,14 @@ import emoney.merchant.proto.userdata.AppData;
 
 public class Register extends Activity implements OnClickListener {
 	private final static String TAG = "{class} Register";
+	private static final boolean debugTextViewVisibility = false;
+	
+	TextView debug;
+	
 	private AppData appdata;
 	private String ACCN, NewPass, ConfPass;
 	private ProgressBar spinner;
-			
+	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
@@ -41,7 +45,12 @@ public class Register extends Activity implements OnClickListener {
 		//button listener
 		((Button)findViewById(R.id.bRegConfirm)).setOnClickListener(this);
 		((Button)findViewById(R.id.bRegCancel)).setOnClickListener(this);
-		((TextView)findViewById(R.id.tRegDebug)).setVisibility(View.INVISIBLE);
+		debug = (TextView)findViewById(R.id.tRegDebug);
+		if(debugTextViewVisibility) {
+        	debug.setVisibility(View.VISIBLE);
+        } else {
+        	debug.setVisibility(View.GONE);
+        }
 	}
 
 	@Override
@@ -49,17 +58,11 @@ public class Register extends Activity implements OnClickListener {
 		// TODO Auto-generated method stub
 		switch(v.getId()){
 			case R.id.bRegConfirm:
-				//UI purpose
-				spinner.setVisibility(View.VISIBLE);
 				Log.d(TAG,"Starts register");
 				
 				//hide soft keyboard
 				InputMethodManager inputManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE); 
 				inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),InputMethodManager.HIDE_NOT_ALWAYS);
-				
-				//UI purpose
-				((Button)findViewById(R.id.bRegConfirm)).setEnabled(false);
-				((Button)findViewById(R.id.bRegCancel)).setEnabled(false);
 				
 				//get string from edit text
 				ACCN = ((EditText)findViewById(R.id.eRegACCN)).getText().toString();
@@ -68,8 +71,7 @@ public class Register extends Activity implements OnClickListener {
 
 				//check if data from edit text is correct
 				//ACCN must have length of 14
-				if(ACCN.length() != 14){
-//				if(ACCN.length() < 12){
+				if(ACCN.length() < 14){
 					Toast.makeText(getApplicationContext(), "Incorrect Account ID length" , Toast.LENGTH_SHORT).show();
 					return;
 				}
@@ -86,15 +88,25 @@ public class Register extends Activity implements OnClickListener {
 					return;
 				}
 
+				//UI purpose
+				((Button)findViewById(R.id.bRegConfirm)).setEnabled(false);
+				((Button)findViewById(R.id.bRegCancel)).setEnabled(false);
+				spinner.setVisibility(View.VISIBLE);
+				
 				//create JSON object of REGISTRATION
 				long lACCN = Long.parseLong(ACCN);
-				
 				JSONObject json = new JSONObject();
 				try {
 					json.put("HWID", appdata.getIMEI());
 					json.put("ACCN", lACCN);
-					((TextView)findViewById(R.id.tRegDebug)).setText("JSON send:"+json.toString());
-					((TextView)findViewById(R.id.tRegDebug)).setVisibility(View.VISIBLE);
+					
+					debug.setText("JSON send:"+json.toString());
+					if(debugTextViewVisibility) {
+			        	debug.setVisibility(View.VISIBLE);
+			        } else {
+			        	debug.setVisibility(View.GONE);
+			        }
+					
 				} catch (NumberFormatException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();

@@ -26,6 +26,8 @@ import emoney.merchant.proto.userdata.AppData;
 
 public class MainActivity extends Activity implements OnClickListener{
 	private final static String TAG = "{class} MainActivity";
+	private static final boolean debugTextViewVisibility = false;
+	
 	private NfcAdapter nfcA;
 	private AppData appdata;
 	TextView tDebug;
@@ -83,6 +85,11 @@ public class MainActivity extends Activity implements OnClickListener{
         bOption = (Button) findViewById(R.id.bOption);
         bOption.setOnClickListener(this);
         bOption.setEnabled(false);
+        if(debugTextViewVisibility) {
+        	tDebug.setVisibility(View.VISIBLE);
+        } else {
+        	tDebug.setVisibility(View.GONE);
+        }
         
         //get device IMEI
     	TelephonyManager T = (TelephonyManager)getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
@@ -91,6 +98,10 @@ public class MainActivity extends Activity implements OnClickListener{
 		
         appdata = new AppData(getApplicationContext());
         Log.d(TAG,"create new AppData class successfully");
+        if(appdata.getError() == true){
+			Toast.makeText(this, "APPDATA ERROR!", Toast.LENGTH_LONG).show();
+			finish();
+		}
         
         //if ACCN empty, open register activity and close main activity
         if(appdata.getACCN() == 0){

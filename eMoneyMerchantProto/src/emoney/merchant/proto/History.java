@@ -22,6 +22,7 @@ import android.widget.ArrayAdapter;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.Toast;
 import emoney.merchant.proto.misc.Converter;
 import emoney.merchant.proto.userdata.AppData;
 import emoney.merchant.proto.userdata.LogDB;
@@ -34,7 +35,7 @@ public class History extends Activity{
 	TextView tMsg;
 	private Cursor cur;
 	private byte[] log_key;
-	private List<String[]> colorList;
+	private List<String[]> transList;
 	private boolean error;
 	private AppData appdata;
 	private String passExtra;
@@ -52,7 +53,12 @@ public class History extends Activity{
 		passExtra = myIntent.getStringExtra("Password");
 	
 		appdata = new AppData(this);
-		colorList = new LinkedList<String[]>();
+		if(appdata.getError() == true){
+			Toast.makeText(this, "APPDATA ERROR!", Toast.LENGTH_LONG).show();
+			finish();
+		}
+		
+		transList = new LinkedList<String[]>();
 		
 		//UI purpose
         lv = (ListView)findViewById(R.id.LVH);
@@ -121,11 +127,11 @@ public class History extends Activity{
     					//if ACCN-M is empty, write only amount and date
     					//if ACCN-M is NOT empty, write amount, ACCN-M, and date
     					if(Converter.byteArrayToLong(accnM) == 0){
-    						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), df.format(d)});
+    						transList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), df.format(d)});
     					} else {
 //    						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), String.valueOf(Converter.byteArrayToLong(accnM))+"\n"+df.format(d)});
     						//merchant shows accn payer
-    						colorList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), String.valueOf(Converter.byteArrayToLong(accnP))+"\n"+df.format(d)});
+    						transList.add(new String[]{String.valueOf(Converter.byteArrayToInteger(amnt)), String.valueOf(Converter.byteArrayToLong(accnP))+"\n"+df.format(d)});
     					}
     					
     					cur.moveToNext();
@@ -173,7 +179,7 @@ public class History extends Activity{
 					pHistory.setVisibility(View.GONE);
 					lv.setVisibility(View.VISIBLE);
 					tMsg.setVisibility(View.GONE);
-			        ArrayAdapter<String[]> adapter = new ArrayAdapter<String[]>(getApplicationContext(), android.R.layout.simple_list_item_2, android.R.id.text1, colorList) {
+			        ArrayAdapter<String[]> adapter = new ArrayAdapter<String[]>(getApplicationContext(), android.R.layout.simple_list_item_2, android.R.id.text1, transList) {
 			 
 			            @Override
 			            public View getView(int position, View convertView, ViewGroup parent) {
@@ -184,7 +190,7 @@ public class History extends Activity{
 			                // If you look at the android.R.layout.simple_list_item_2 source, you'll see
 			                // it's a TwoLineListItem with 2 TextViews - text1 and text2.
 			                //TwoLineListItem listItem = (TwoLineListItem) view;
-			                String[] entry = colorList.get(position);
+			                String[] entry = transList.get(position);
 			                TextView text1 = (TextView) view.findViewById(android.R.id.text1);
 			                TextView text2 = (TextView) view.findViewById(android.R.id.text2);
 			                text1.setText(entry[0]);

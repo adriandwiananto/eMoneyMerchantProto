@@ -45,6 +45,11 @@ public class Option extends Activity implements OnClickListener{
 		passExtra = myIntent.getStringExtra("Password");
 		
 		appdata = new AppData(this);
+		if(appdata.getError() == true){
+			Toast.makeText(this, "APPDATA ERROR!", Toast.LENGTH_LONG).show();
+			finish();
+		}
+		
 		currentActivity = Option.this;
 		
 		//UI purpose

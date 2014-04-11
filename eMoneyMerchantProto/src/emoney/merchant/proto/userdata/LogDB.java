@@ -91,15 +91,15 @@ public class LogDB extends SQLiteOpenHelper{
 		
 		byte[] plainLog = new byte[30];
 		ByteBuffer target = ByteBuffer.wrap(plainLog);
-		target.put(num);
-		target.put(payloadType);
-		target.put(binaryID);
-		target.put(accnM);
-		target.put(accnP);
-		target.put(amount);
-		target.put(timeStamp);
-		target.put(status);
-		target.put(cancel);
+		target.put(num); //0~2
+		target.put(payloadType); //3
+		target.put(binaryID); //4~7
+		target.put(accnM); //8~13
+		target.put(accnP); //14~19
+		target.put(amount); //20~23
+		target.put(timeStamp); //24~27
+		target.put(status); //28
+		target.put(cancel); //29
 		Log.d(TAG,"plain log:"+Converter.byteArrayToHexString(plainLog));
 
 		String ciphertext;
@@ -127,6 +127,44 @@ public class LogDB extends SQLiteOpenHelper{
 		long rowid = db.insert(TABLE, null, CV);
 		//db.close();
 		return rowid;
+	}
+	
+	/**
+	 * insert transaction to log
+	 * @param row db row to insert transaction log
+	 * @param logFormattedArray transaction log in log format (plaintext)
+	 * @return true for success, false for fail
+	 */
+	public boolean insertTransToLog(long row, byte[] logFormattedArray){
+		Log.d(TAG,"transaction packet: "+Converter.byteArrayToHexString(logFormattedArray));
+		SQLiteDatabase db = getWritableDatabase();
+		ContentValues CV =  new ContentValues();
+		
+		String ciphertext;
+		byte[] encryptedLogArray = new byte[32];
+		byte[] iv = new byte[16];
+		byte[] logIv= new byte[48];
+		
+		SecureRandom random = new SecureRandom();		
+		random.nextBytes(iv);
+		
+		System.arraycopy(iv, 0, logIv, 32, 16);
+		
+		try {
+			encryptedLogArray = AES256cipher.encrypt(iv, logKey, logFormattedArray);
+			System.arraycopy(encryptedLogArray, 0, logIv, 0, 32);
+			ciphertext = Converter.byteArrayToHexString(logIv);
+			Log.d(TAG,"Log to write to database:"+ciphertext);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return false;
+		}
+		
+		CV.put(CL_LOG, logIv);
+		db.update(TABLE, CV, CL_ID + "=" + row, null);
+		//db.close();
+		return true;
 	}
 	
 	/**
@@ -164,7 +202,6 @@ public class LogDB extends SQLiteOpenHelper{
 		 * @param log_key
 		 * @return decrypted log
 		 */
-//		public byte[] getDecrpytedLogPerRow(Cursor cur, byte[] log_key){
 		public byte[] getDecrpytedLogPerRow(Cursor cur){
 			byte[] encryptedLog = cur.getBlob(cur.getColumnIndex(CL_LOG));
 			Log.d(TAG,"encryptedLog: "+Converter.byteArrayToHexString(encryptedLog));
@@ -174,7 +211,6 @@ public class LogDB extends SQLiteOpenHelper{
 			byte[] decryptedLog = new byte[32];
 			
 			try{
-				//decryptedLog = AES256cipher.decrypt(iv, log_key, logOnly);
 				decryptedLog = AES256cipher.decrypt(iv, logKey, logOnly);
 				Log.d(TAG,"decryptedLog: "+Converter.byteArrayToHexString(decryptedLog));
 			} catch (Exception e) {
@@ -207,7 +243,6 @@ public class LogDB extends SQLiteOpenHelper{
 					int rowNum = c.getInt(c.getColumnIndex(CL_ID));
 					Log.d(TAG,"current operation on row:"+rowNum);
 					try{
-//						byte[] decryptedLog = this.getDecrpytedLogPerRow(c, logKey);
 						byte[] decryptedLog = this.getDecrpytedLogPerRow(c);
 						if(error == true){
 							Log.d(TAG,"error decrypt");

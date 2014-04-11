@@ -83,6 +83,10 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 		
 		param_mode = REGISTRATION_MODE;
 		appdata = new AppData(ctx);
+		if(appdata.getError() == true){
+			Toast.makeText(ctx, "APPDATA ERROR!", Toast.LENGTH_LONG).show();
+			parentActivity.finish();
+		}
 		
 		data = jobj.toString();
 	}
@@ -107,6 +111,10 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 		error = 0;
 		
 		appdata = new AppData(ctx);
+		if(appdata.getError() == true){
+			Toast.makeText(ctx, "APPDATA ERROR!", Toast.LENGTH_LONG).show();
+			parentActivity.finish();
+		}
 	}
 
 	@Override
@@ -306,7 +314,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 						//notification dialog for registration success					
 						new AlertDialog.Builder(parentActivity)
 							.setTitle("Notification")
-							.setMessage("Registration Success\nBalance Rp. "+returnBalance)
+							.setMessage("Registration Success\nBalance: "+Converter.longToRupiah(returnBalance))
 							.setNeutralButton("OK", new DialogInterface.OnClickListener()
 						{
 						    @Override
@@ -398,7 +406,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 				//notification dialog about sync success
 				new AlertDialog.Builder(parentActivity)
 					.setTitle("Notification")
-					.setMessage("Sync Success\nBalance Rp. "+returnBalance)
+					.setMessage("Sync Success\nBalance: "+Converter.longToRupiah(returnBalance))
 					.setNeutralButton("OK", new DialogInterface.OnClickListener()
 				{
 				    @Override

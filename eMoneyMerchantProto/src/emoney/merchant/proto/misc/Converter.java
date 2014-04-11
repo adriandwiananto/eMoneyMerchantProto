@@ -2,6 +2,8 @@ package emoney.merchant.proto.misc;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.text.NumberFormat;
+import java.util.Locale;
 
 public class Converter {
 	
@@ -81,5 +83,17 @@ public class Converter {
 		} else {
 			return ByteBuffer.wrap(dataByte).getLong();
 		}
+	}
+	
+	/**
+	 * Convert amount (in long) to Rupiah format
+	 * @param amount amount to convert
+	 * @return Rp[amount] in String
+	 */
+	public static String longToRupiah(long amount){
+		Locale indo = new Locale("id", "ID");
+		NumberFormat indoFormat = NumberFormat.getCurrencyInstance(indo);
+		
+		return indoFormat.format(amount);
 	}
 }

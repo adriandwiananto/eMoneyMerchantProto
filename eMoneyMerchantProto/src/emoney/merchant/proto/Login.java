@@ -24,6 +24,8 @@ public class Login extends Activity implements OnClickListener {
 	TextView loginDebug;
 	
 	private final static String TAG = "{class} Login";
+	private static final boolean debugTextViewVisibility = false;
+	
 	private AppData appdata;
 	private String password;
 	
@@ -33,7 +35,7 @@ public class Login extends Activity implements OnClickListener {
 		setContentView(R.layout.login);
 		
 		appdata = new AppData(this);
-
+		
 		//debugging purpose
 		Date d = new Date(appdata.getLATS()*1000);
 		SimpleDateFormat df = new SimpleDateFormat("dd-MM-yyyy HH:mm:ss", Locale.US);
@@ -47,6 +49,12 @@ public class Login extends Activity implements OnClickListener {
 		loginDebug.append("\nLast Sync(Readable) : "+ df.format(d));
 		Log.d(TAG,"key:"+appdata.getEncryptedKey());
 		loginDebug.append("\nWrapped Key+Iv : "+ appdata.getEncryptedKey());
+		
+		if(debugTextViewVisibility) {
+        	loginDebug.setVisibility(View.VISIBLE);
+        } else {
+        	loginDebug.setVisibility(View.GONE);
+        }
 		
 		//set button listener
 		((Button)findViewById(R.id.bLoginProceed)).setOnClickListener(this);

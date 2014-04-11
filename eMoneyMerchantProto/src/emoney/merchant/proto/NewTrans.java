@@ -31,6 +31,7 @@ import emoney.merchant.proto.userdata.LogDB;
 
 public class NewTrans extends Activity implements OnClickListener , OnNdefPushCompleteCallback {
 	private final static String TAG = "{class} NewTrans";
+	private static final boolean debugTextViewVisibility = false;
 	
 	private NfcAdapter nfcAdapter;
 	private PendingIntent mNfcPendingIntent;
@@ -40,7 +41,7 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 	Button bCancel;
 	TextView tDebug, tMsg;
 	private byte[] aes_key, log_key, balance_key;
-	private int sequence = 0;
+	private int sequence;
 	private int sesnInt;
 	
 	ParseReceivedPacket prp;
@@ -52,14 +53,22 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.newtrans);
 
+		//	sequence 0 - expected to send merchant request
+		//	sequence 1 - waiting for transaction data from payer
+		//	sequence 2 - accepted transaction data, expected to send receipt
+		sequence = 0;
+		
 		appdata = new AppData(getApplicationContext());
+		if(appdata.getError() == true){
+			Toast.makeText(this, "APPDATA ERROR!", Toast.LENGTH_LONG).show();
+			finish();
+		}
+		
 		Intent myIntent = getIntent();
 		aes_key = myIntent.getByteArrayExtra("aesKey");
 		log_key = myIntent.getByteArrayExtra("logKey");
 		balance_key = myIntent.getByteArrayExtra("balanceKey");
 		passExtra = myIntent.getStringExtra("Password");
-		
-		//UI Init
 		
 		nfcAdapter = NfcAdapter.getDefaultAdapter(this);
 		if (nfcAdapter == null) return; 
@@ -74,7 +83,7 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		
 		bCancel = (Button)findViewById(R.id.bNewTransCancel);
 		bCancel.setOnClickListener(this);
-		
+
 		Random r = new Random();
 		int Low = 100; //inclusive
 		int High = 1000; //exclusive
@@ -96,7 +105,11 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		tDebug.append("\nPlain payload:\n"+Converter.byteArrayToHexString(plainPayload));
 		tDebug.append("\nCiphered payload:\n"+Converter.byteArrayToHexString(packet.getCipherPayload()));
 		tDebug.append("\naes key:\n"+Converter.byteArrayToHexString(aes_key));
-		tDebug.setVisibility(View.VISIBLE);
+		if(debugTextViewVisibility) {
+        	tDebug.setVisibility(View.VISIBLE);
+        } else {
+        	tDebug.setVisibility(View.GONE);
+        }
 		
 		Log.d(TAG,"onCreate called!");
 	}
@@ -131,20 +144,43 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 			if(prp.getErrorCode() != 0){
 				Toast.makeText(getApplicationContext(), prp.getErrorMsg(), Toast.LENGTH_LONG).show();
 			} else {
-				sequence = 2;
-				int receivedSesn = Converter.byteArrayToInteger(prp.getReceivedSESN());
-				
-				if(receivedSesn == sesnInt){
-					byte[] accnInByteArray = Arrays.copyOfRange(Converter.longToByteArray(appdata.getACCN()), 2, 8);
-					LogDB ldb = new LogDB(this, log_key, accnInByteArray);
-			    	ldb.insertLastTransToLog(prp.getReceivedPlainPacket());
-			    	
-			    	appdata.setLastTransTS(System.currentTimeMillis() / 1000);
+				if(sequence == 1) {
+					sequence = 2;
+					int receivedSesn = Converter.byteArrayToInteger(prp.getReceivedSESN());
+					
+					if(receivedSesn == sesnInt){
+						byte[] accnInByteArray = Arrays.copyOfRange(Converter.longToByteArray(appdata.getACCN()), 2, 8);
+						LogDB ldb = new LogDB(this, log_key, accnInByteArray);
+				    	ldb.insertLastTransToLog(prp.getReceivedPlainPacket());
+				    	
+				    	appdata.setLastTransTS(System.currentTimeMillis() / 1000);
+		
+						Toast.makeText(getApplicationContext(), "Transaction Success!", Toast.LENGTH_LONG).show();
 	
-					Toast.makeText(getApplicationContext(), "Transaction Success!", Toast.LENGTH_LONG).show();
-					//finish();
-					//close pay activity and open main activity
-					backToMain();
+						//close pay activity and open main activity
+						//backToMain();
+						
+						//PRINT PDF HERE!
+						
+						tMsg.setText("Transaction Success!!\n" + "Amount: " + 
+								Converter.longToRupiah(Converter.byteArrayToLong(prp.getReceivedAMNT())) + "\nPayer ID: " +
+								Converter.byteArrayToLong(prp.getReceivedACCN()) +
+								"\n\nTap payer device to send receipt" +
+								"\nPress Finish to finish transaction without sending transaction receipt");
+						bCancel.setText("Finish");
+						
+						//build packet for sending receipt
+						Packet receipt = new Packet(Converter.byteArrayToInteger(prp.getReceivedAMNT()), 
+													Converter.byteArrayToInteger(prp.getReceivedSESN()), 
+													Converter.byteArrayToInteger(prp.getReceivedTS()), 
+													appdata.getACCN(), 
+													Converter.byteArrayToLong(prp.getReceivedLATS()), 
+													aes_key);
+						byte[] receiptPacket = receipt.buildTransPacket();
+						toSend = receipt.createNDEFMessage("emoney/merchantReceipt", receiptPacket);
+						nfcAdapter.setNdefPushMessage(toSend, this);
+						Log.d(TAG,"receipt packet: "+Converter.byteArrayToHexString(receiptPacket));
+					}
 				}
 			}
         }
@@ -157,7 +193,11 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 			case R.id.bNewTransCancel:
 				Log.d(TAG,"cancel!");
 //				finish();
-				exitDialog();
+				if(sequence != 2){
+					exitDialog();
+				} else {
+					backToMain();
+				}
 				break;
 		}
 	}
@@ -184,6 +224,9 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 			nfcAdapter.setNdefPushMessage(null, this);
 			sequence = 1;
 			hand.sendMessage(hand.obtainMessage(1));
+		} else if(sequence == 2) {
+			nfcAdapter.setNdefPushMessage(null, this);
+			hand.sendMessage(hand.obtainMessage(3));
 		}
 	}
 	
@@ -219,6 +262,20 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 			switch (msg.what){
 				case 1:
 					tMsg.setText("Waiting payment from payer device");
+					break;
+				case 3:
+			        //popup notification
+			    	new AlertDialog.Builder(NewTrans.this)
+					.setTitle("Notification")
+					.setMessage("Receipt sent!")
+					.setNeutralButton("OK", new DialogInterface.OnClickListener()
+					{
+					    @Override
+					    public void onClick(DialogInterface dialog, int which) {
+							backToMain();
+					    }
+					})
+					.show();
 					break;
 			}
 		}

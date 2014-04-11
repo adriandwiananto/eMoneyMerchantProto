@@ -93,7 +93,7 @@ public class Packet {
 
 		trans[0] = 55;	//Frame Length (1)
 		trans[1] = 1;	//offline (1)
-		trans[2] = 0;	//payer (1)
+		trans[2] = 1;	//mercchant (1)
 		System.arraycopy(ByteBuffer.allocate(4).putInt(intSESN).array(), 2, trans, 3, 2); //SESN (2)
 		trans[5] = 0; //EH (2)
 		trans[6] = 0; //EH
