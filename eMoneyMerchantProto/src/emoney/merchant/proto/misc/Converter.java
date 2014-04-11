@@ -2,7 +2,9 @@ package emoney.merchant.proto.misc;
 
 import java.math.BigInteger;
 import java.nio.ByteBuffer;
+import java.sql.Date;
 import java.text.NumberFormat;
+import java.text.SimpleDateFormat;
 import java.util.Locale;
 
 public class Converter {
@@ -95,5 +97,29 @@ public class Converter {
 		NumberFormat indoFormat = NumberFormat.getCurrencyInstance(indo);
 		
 		return indoFormat.format(amount);
+	}
+	
+	/**
+	 * Convert timestamp (in second from epoch) to human readable format
+	 * <br>date / month / year hour:minutes:seconds
+	 * @param timestamp timestamp to convert
+	 * @return string interpretation
+	 */
+	public static String timestampToReadable(long timestamp){
+		Date d = new Date(timestamp*1000);
+		SimpleDateFormat df = new SimpleDateFormat("dd / MM / yyyy HH:mm:ss", Locale.US);
+		return df.format(d);
+	}
+	
+	/**
+	 * Convert timestamp (in second from epoch) to String format.
+	 * <br>Used mainly for receipt filename (monthdateyearhourminutesecond)
+	 * @param timestamp timestamp to convert
+	 * @return string interpretation
+	 */
+	public static String timestampToString(long timestamp){
+		Date d = new Date(timestamp*1000);
+		SimpleDateFormat df = new SimpleDateFormat("MMddyyyyHHmmss", Locale.US);
+		return df.format(d);
 	}
 }

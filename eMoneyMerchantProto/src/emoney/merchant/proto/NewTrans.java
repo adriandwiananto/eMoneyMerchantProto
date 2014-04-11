@@ -26,6 +26,7 @@ import android.widget.Toast;
 import emoney.merchant.proto.misc.Converter;
 import emoney.merchant.proto.misc.Packet;
 import emoney.merchant.proto.misc.Packet.ParseReceivedPacket;
+import emoney.merchant.proto.misc.Receipt;
 import emoney.merchant.proto.userdata.AppData;
 import emoney.merchant.proto.userdata.LogDB;
 
@@ -161,6 +162,12 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 						//backToMain();
 						
 						//PRINT PDF HERE!
+						Receipt rcp = new Receipt(NewTrans.this, Converter.byteArrayToLong(prp.getReceivedTS()), 
+				        		appdata.getACCN(), Converter.byteArrayToLong(prp.getReceivedACCN()),  
+				        		Converter.byteArrayToInteger(prp.getReceivedAMNT()));
+						if(!rcp.writeReceiptPdfToFile()){
+							Toast.makeText(this, "Error creating receipt, external storage not found", Toast.LENGTH_LONG).show();
+						}
 						
 						tMsg.setText("Transaction Success!!\n" + "Amount: " + 
 								Converter.longToRupiah(Converter.byteArrayToLong(prp.getReceivedAMNT())) + "\nPayer ID: " +
