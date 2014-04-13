@@ -33,27 +33,27 @@ public class Receipt {
 	}
 	
 	private String pdfContent() {
-		PDFWriter mPDFWriter = new PDFWriter(PaperSize.A10_HEIGHT, PaperSize.A10_WIDTH);
+		PDFWriter mPDFWriter = new PDFWriter(PaperSize.A7_HEIGHT, PaperSize.A7_WIDTH);
 		
 		AssetManager mngr = actv.getAssets();
 		try {
 			Bitmap itbPNG = BitmapFactory.decodeStream(mngr.open("ITB_logo_mono.bmp"));
-			mPDFWriter.addImage(22, 50, 17, 17, itbPNG);
+			mPDFWriter.addImage(71, 145, 40, 40, itbPNG);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 		mPDFWriter.setFont(StandardFonts.SUBTYPE, StandardFonts.TIMES_BOLD);
-		mPDFWriter.addText(45, 56, 12, "e-Money");
+		mPDFWriter.addText(120, 158, 30, "e-Money");
 		
 		mPDFWriter.setFont(StandardFonts.SUBTYPE, StandardFonts.TIMES_ROMAN);
-		mPDFWriter.addText(7, 38, 4, Converter.timestampToReadable(ts));
-		mPDFWriter.addText(7, 32, 4, "Merchant: "+accn_M);
-		mPDFWriter.addText(7, 26, 4, "Payer: "+accn_P);
+		mPDFWriter.addText(20, 116, 12, Converter.timestampToReadable(ts));
+		mPDFWriter.addText(20, 99, 12, "Merchant: "+accn_M);
+		mPDFWriter.addText(20, 82, 12, "Payer: "+accn_P);
 
 		int digits = (int) Math.log10(amnt) + 1;
-		int padding = 40-(digits*7);
+		int padding = 124-(digits*18);
 		mPDFWriter.setFont(StandardFonts.SUBTYPE, StandardFonts.TIMES_BOLD);
-		mPDFWriter.addText(35+padding, 10, 12, Converter.longToRupiah(amnt));
+		mPDFWriter.addText(74+padding, 34, 36, Converter.longToRupiah(amnt));
 		
 		String s = mPDFWriter.asString();
 		return s;
