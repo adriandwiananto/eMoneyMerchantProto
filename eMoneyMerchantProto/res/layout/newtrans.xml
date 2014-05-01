@@ -8,28 +8,52 @@
     android:paddingRight="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/activity_vertical_margin" >
 
-    <TextView
-        android:id="@+id/tNewTransSESN"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:gravity="center_horizontal"
-        android:paddingTop="@dimen/first_top_margin_in_activity"
-        android:text="@string/tNewTransSESN" />
+        android:paddingTop="@dimen/first_top_margin_in_activity" >
 
-    <RelativeLayout
+        <TextView
+            android:id="@+id/tNewTransMsg"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/tNewTransMsg" />
+
+        <EditText
+            android:id="@+id/eNewTransAmount"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:ems="10"
+            android:inputType="number" >
+
+            <requestFocus />
+        </EditText>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/LinearLayout1"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="@dimen/top_margin_between_row_in_activity" >
 
         <Button
-            android:id="@+id/bNewTransCancel"
-            android:layout_width="wrap_content"
+            android:id="@+id/bNewTransProceed"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_centerInParent="true"
+            android:layout_weight="1"
+            android:text="@string/bNewTransProceed" />
+
+        <Button
+            android:id="@+id/bNewTransCancel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
             android:gravity="center_vertical|center_horizontal"
             android:text="@string/bNewTransCancel" />
 
-    </RelativeLayout>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tNewTransDebug"

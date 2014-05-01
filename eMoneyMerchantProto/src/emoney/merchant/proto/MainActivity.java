@@ -32,7 +32,7 @@ public class MainActivity extends Activity implements OnClickListener{
 	private AppData appdata;
 	TextView tDebug;
 	ProgressBar pLoading;
-	Button bNewTrans,bHistory,bSettlement,bOption;
+	Button bNewTrans, bNewTransQR,bHistory,bSettlement,bOption;
 	private String password;
 	private long lIMEI;
 	private KeyDerive key;
@@ -46,6 +46,7 @@ public class MainActivity extends Activity implements OnClickListener{
 			//UI modification
 			pLoading.setVisibility(View.GONE);
 			bNewTrans.setEnabled(true);
+			bNewTransQR.setEnabled(true);
 			bHistory.setEnabled(true);
 			bSettlement.setEnabled(true);
 			bOption.setEnabled(true);
@@ -62,20 +63,15 @@ public class MainActivity extends Activity implements OnClickListener{
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 		
-		// Init NFC
-        nfcA = NfcAdapter.getDefaultAdapter(this);
-        // no nfc device
-    	if (nfcA == null){
-    		Toast.makeText(this, "No NFC found!", Toast.LENGTH_LONG).show();
-        	finish();
-        }
-    	
     	//UI Initialization
     	pLoading = (ProgressBar)findViewById(R.id.pMain);
     	tDebug = (TextView)findViewById(R.id.tDebug);
     	bNewTrans = (Button) findViewById(R.id.bNewTrans);
     	bNewTrans.setOnClickListener(this);
     	bNewTrans.setEnabled(false);
+    	bNewTransQR = (Button) findViewById(R.id.bNewTransQR);
+    	bNewTransQR.setOnClickListener(this);
+    	bNewTransQR.setEnabled(false);
         bHistory = (Button) findViewById(R.id.bHistory);
         bHistory.setOnClickListener(this);
         bHistory.setEnabled(false);
@@ -90,7 +86,15 @@ public class MainActivity extends Activity implements OnClickListener{
         } else {
         	tDebug.setVisibility(View.GONE);
         }
-        
+
+        // Init NFC
+        nfcA = NfcAdapter.getDefaultAdapter(this);
+        // no nfc device
+    	if (nfcA == null){
+    		Toast.makeText(this, "No NFC found!", Toast.LENGTH_LONG).show();
+        	finish();
+        }
+    	
         //get device IMEI
     	TelephonyManager T = (TelephonyManager)getApplicationContext().getSystemService(Context.TELEPHONY_SERVICE);
 		String IMEI = T.getDeviceId();
@@ -182,6 +186,9 @@ public class MainActivity extends Activity implements OnClickListener{
 				startActivity(payIntent);
 				finish();
 				break;
+			case R.id.bNewTransQR:
+				//new trans QR goes in here!!!
+				break;
 			case R.id.bHistory:
 				//user choose history mode
 				//this activity will be closed and history activity will be opened
@@ -196,6 +203,7 @@ public class MainActivity extends Activity implements OnClickListener{
 				//disable all button, show progress bar
 				pLoading.setVisibility(View.VISIBLE);
 				bNewTrans.setEnabled(false);
+				bNewTransQR.setEnabled(false);
 				bHistory.setEnabled(false);
 				bSettlement.setEnabled(false);
 				bOption.setEnabled(false);

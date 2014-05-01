@@ -20,7 +20,22 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/bNewTrans" />
+            android:text="@string/bNewTrans"
+            android:textSize="15sp" />
+
+        <Button
+            android:id="@+id/bNewTransQR"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="@string/bNewTransQR" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="@dimen/top_margin_between_row_in_activity"
+        android:paddingTop="@dimen/top_margin_between_row_in_activity" >
 
         <Button
             android:id="@+id/bHistory"
@@ -28,20 +43,6 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/bHistory" />
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:paddingTop="@dimen/top_margin_between_row_in_activity" >
-
-        <Button
-            android:id="@+id/bSettlement"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/bSettlement" />
 
         <Button
             android:id="@+id/bOption"
@@ -52,6 +53,12 @@
 
     </LinearLayout>
 
+    <Button
+        android:id="@+id/bSettlement"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@string/bSettlement" />
+    
     <ProgressBar
         android:id="@+id/pMain"
         style="?android:attr/progressBarStyleLarge"

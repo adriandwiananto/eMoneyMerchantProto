@@ -7,20 +7,25 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.nfc.NdefMessage;
 import android.nfc.NfcAdapter;
 import android.nfc.NfcAdapter.OnNdefPushCompleteCallback;
 import android.nfc.NfcEvent;
+import android.opengl.Visibility;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Parcelable;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 import emoney.merchant.proto.misc.Converter;
@@ -39,8 +44,9 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 	private NdefMessage toSend;
 	
 	private AppData appdata;
-	Button bCancel;
+	Button bProceed,bCancel;
 	TextView tDebug, tMsg;
+	EditText eAmount;
 	private byte[] aes_key, log_key, balance_key;
 	private int sequence;
 	private int sesnInt;
@@ -48,6 +54,7 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 	ParseReceivedPacket prp;
 	
 	private String passExtra;
+	private int amountInt;
 	
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
@@ -72,40 +79,45 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 		passExtra = myIntent.getStringExtra("Password");
 		
 		nfcAdapter = NfcAdapter.getDefaultAdapter(this);
-		if (nfcAdapter == null) return; 
+		if (nfcAdapter == null) {
+			Toast.makeText(getApplicationContext(), "No NFC detected", Toast.LENGTH_LONG).show();
+			backToMain(); 
+		}
 		nfcAdapter.setNdefPushMessage(null, this);
 		nfcAdapter.setOnNdefPushCompleteCallback(this, this);
 		mNfcPendingIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, getClass()).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP), 0);
 
-		tMsg = (TextView)findViewById(R.id.tNewTransSESN);
+		tMsg = (TextView)findViewById(R.id.tNewTransMsg);
 		tDebug = (TextView)findViewById(R.id.tNewTransDebug);
-		bCancel = (Button)findViewById(R.id.bNewTransCancel);
-		
+		eAmount = (EditText)findViewById(R.id.eNewTransAmount);
 		bCancel = (Button)findViewById(R.id.bNewTransCancel);
 		bCancel.setOnClickListener(this);
-
-		Random r = new Random();
-		int Low = 100; //inclusive
-		int High = 1000; //exclusive
-		sesnInt = r.nextInt(High-Low) + Low;
+		bProceed = (Button)findViewById(R.id.bNewTransProceed);
+		bProceed.setOnClickListener(this);
 		
-		long timestamp = System.currentTimeMillis()/1000;
-		int timestampInt = Integer.valueOf(Long.valueOf(timestamp).intValue());
+//		Random r = new Random();
+//		int Low = 100; //inclusive
+//		int High = 1000; //exclusive
+//		sesnInt = r.nextInt(High-Low) + Low;
+//		
+//		long timestamp = System.currentTimeMillis()/1000;
+//		int timestampInt = Integer.valueOf(Long.valueOf(timestamp).intValue());
+//		
+//		Packet packet = new Packet(0, sesnInt, timestampInt, appdata.getACCN(), 0, aes_key);
+//		byte[] packetArrayToSend = packet.buildTransPacket();
+//		toSend = packet.createNDEFMessage("emoney/merchantRequest", packetArrayToSend);
+//
+//		nfcAdapter.setNdefPushMessage(toSend, this);
+//		
+//		byte[] plainPayload = new byte[32];
+//		System.arraycopy(packet.getPlainPacket(), 7, plainPayload, 0, 32);
+//		
+//		tDebug.setText("Data packet to send:\n"+Converter.byteArrayToHexString(packetArrayToSend));
+//		tDebug.append("\nPlain payload:\n"+Converter.byteArrayToHexString(plainPayload));
+//		tDebug.append("\nCiphered payload:\n"+Converter.byteArrayToHexString(packet.getCipherPayload()));
+//		tDebug.append("\naes key:\n"+Converter.byteArrayToHexString(aes_key));
 		
-		Packet packet = new Packet(0, sesnInt, timestampInt, appdata.getACCN(), 0, aes_key);
-		byte[] packetArrayToSend = packet.buildTransPacket();
-		toSend = packet.createNDEFMessage("emoney/merchantRequest", packetArrayToSend);
-
-		nfcAdapter.setNdefPushMessage(toSend, this);
-		
-		byte[] plainPayload = new byte[32];
-		System.arraycopy(packet.getPlainPacket(), 7, plainPayload, 0, 32);
-		
-		tDebug.setText("Data packet to send:\n"+Converter.byteArrayToHexString(packetArrayToSend));
-		tDebug.append("\nPlain payload:\n"+Converter.byteArrayToHexString(plainPayload));
-		tDebug.append("\nCiphered payload:\n"+Converter.byteArrayToHexString(packet.getCipherPayload()));
-		tDebug.append("\naes key:\n"+Converter.byteArrayToHexString(aes_key));
 		if(debugTextViewVisibility) {
         	tDebug.setVisibility(View.VISIBLE);
         } else {
@@ -169,6 +181,7 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 							Toast.makeText(this, "Error creating receipt, external storage not found", Toast.LENGTH_LONG).show();
 						}
 						
+						tMsg.setGravity(Gravity.CENTER);
 						tMsg.setText("Transaction Success!!\n" + "Amount: " + 
 								Converter.longToRupiah(Converter.byteArrayToLong(prp.getReceivedAMNT())) + "\nPayer ID: " +
 								Converter.byteArrayToLong(prp.getReceivedACCN()) +
@@ -197,6 +210,42 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 	public void onClick(View v) {
 		// TODO Auto-generated method stub
 		switch(v.getId()){
+			case R.id.bNewTransProceed:
+				if(eAmount.getText().toString().length() > 0){
+					//hide soft keyboard
+					InputMethodManager inputManager = (InputMethodManager)getSystemService(Context.INPUT_METHOD_SERVICE);
+					inputManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(),InputMethodManager.HIDE_NOT_ALWAYS);
+					
+					String amount = eAmount.getText().toString();
+					amountInt = Integer.parseInt(amount);
+
+					bProceed.setEnabled(false);
+					tMsg.append(" "+Converter.longToRupiah(amountInt));
+					eAmount.setVisibility(View.GONE);
+					
+					Random r = new Random();
+					int Low = 100; //inclusive
+					int High = 1000; //exclusive
+					sesnInt = r.nextInt(High-Low) + Low;
+					
+					long timestamp = System.currentTimeMillis()/1000;
+					int timestampInt = Integer.valueOf(Long.valueOf(timestamp).intValue());
+					
+					Packet packet = new Packet(amountInt, sesnInt, timestampInt, appdata.getACCN(), 0, aes_key);
+					byte[] packetArrayToSend = packet.buildTransPacket();
+					toSend = packet.createNDEFMessage("emoney/merchantRequest", packetArrayToSend);
+	
+					nfcAdapter.setNdefPushMessage(toSend, this);
+					
+					byte[] plainPayload = new byte[32];
+					System.arraycopy(packet.getPlainPacket(), 7, plainPayload, 0, 32);
+					
+					tDebug.setText("Data packet to send:\n"+Converter.byteArrayToHexString(packetArrayToSend));
+					tDebug.append("\nPlain payload:\n"+Converter.byteArrayToHexString(plainPayload));
+					tDebug.append("\nCiphered payload:\n"+Converter.byteArrayToHexString(packet.getCipherPayload()));
+					tDebug.append("\naes key:\n"+Converter.byteArrayToHexString(aes_key));
+				}
+				break;
 			case R.id.bNewTransCancel:
 				Log.d(TAG,"cancel!");
 //				finish();
@@ -269,6 +318,7 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 			switch (msg.what){
 				case 1:
 					tMsg.setText("Waiting payment from payer device");
+					eAmount.setVisibility(View.GONE);
 					break;
 				case 3:
 			        //popup notification
