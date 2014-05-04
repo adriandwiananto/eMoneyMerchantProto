@@ -188,6 +188,13 @@ public class MainActivity extends Activity implements OnClickListener{
 				break;
 			case R.id.bNewTransQR:
 				//new trans QR goes in here!!!
+				Intent payQrIntent = new Intent(this, NewTransQr.class);
+				payQrIntent.putExtra("Password", password);
+				payQrIntent.putExtra("aesKey", aes_key);
+				payQrIntent.putExtra("logKey", log_key);
+				payQrIntent.putExtra("balanceKey", balance_key);
+				startActivity(payQrIntent);
+				finish();
 				break;
 			case R.id.bHistory:
 				//user choose history mode
