@@ -221,6 +221,8 @@ public class NewTrans extends Activity implements OnClickListener , OnNdefPushCo
 
 					bProceed.setEnabled(false);
 					tMsg.append(" "+Converter.longToRupiah(amountInt));
+					tMsg.setTextSize(25);
+					tMsg.setGravity(Gravity.CENTER);
 					eAmount.setVisibility(View.GONE);
 					
 					Random r = new Random();

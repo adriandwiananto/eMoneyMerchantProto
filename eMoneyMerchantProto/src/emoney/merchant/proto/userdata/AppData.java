@@ -443,6 +443,7 @@ public class AppData {
 				
 				edit.putString("AESKEY", Converter.byteArrayToHexString(wrappedKeyIv));
 				edit.commit();
+				saveDuplicate();
 				return;
 			} catch (Exception e) {
 				// TODO Auto-generated catch block

@@ -23,6 +23,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.Gravity;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.inputmethod.InputMethodManager;
@@ -144,6 +145,8 @@ public class NewTransQr extends Activity implements OnClickListener {
 
 					bProceed.setEnabled(false);
 					tMsg.append(" "+Converter.longToRupiah(amountInt));
+//					tMsg.setTextSize(25);
+					tMsg.setGravity(Gravity.CENTER);
 					eAmount.setVisibility(View.GONE);
 					
 					Random r = new Random();
