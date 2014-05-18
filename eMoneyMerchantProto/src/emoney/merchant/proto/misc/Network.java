@@ -375,7 +375,7 @@ public class Network extends AsyncTask<Void, Void, JSONObject> {
 			// error occured
 			error = 1;
 			Log.d(TAG,"Response is empty JSON Object");
-			appdata.deleteAppData();
+//			appdata.deleteAppData();
 		}
 		
 		
